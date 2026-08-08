@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSessionContext } from '@livekit/components-react';
+import { toast as sonnerToast } from 'sonner';
 import type { AppConfig } from '@/app-config';
 import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
 import { WelcomeView } from '@/components/app/welcome-view';
@@ -33,7 +34,18 @@ interface ViewControllerProps {
 }
 
 export function ViewController({ appConfig }: ViewControllerProps) {
-  const { isConnected, start } = useSessionContext();
+const { isConnected, start } = useSessionContext();
+  const handleStartCall = async () => {
+    try {
+      await start();
+    } catch (err) {
+      sonnerToast.error('Microphone access is blocked', {
+        description:
+          'Please allow microphone access in your browser settings, then reload the page to talk to your Farm Assistant.',
+        duration: 10000,
+      });
+    }
+  };
   const { resolvedTheme } = useTheme();
 
   return (
@@ -44,7 +56,7 @@ export function ViewController({ appConfig }: ViewControllerProps) {
           key="welcome"
           {...VIEW_MOTION_PROPS}
           startButtonText={appConfig.startButtonText}
-          onStartCall={start}
+          onStartCall={handleStartCall}
         />
       )}
       {/* Session view */}
