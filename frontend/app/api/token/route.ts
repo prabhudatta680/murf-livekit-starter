@@ -43,10 +43,16 @@ export async function POST(req: Request) {
         { ignoreUnknownFields: true }
       );
     }
-      
+
     // Generate participant token
     const participantName = 'user';
-    const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
+    // Use a stable identity sent by the client (so returning callers are
+    // recognized across sessions) if provided, otherwise fall back to a
+    // random one-time identity.
+    const participantIdentity =
+      typeof body?.participant_identity === 'string' && body.participant_identity.length > 0
+        ? body.participant_identity
+        : `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
     const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
 
     const participantToken = await createParticipantToken(

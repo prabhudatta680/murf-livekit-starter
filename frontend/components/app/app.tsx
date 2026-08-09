@@ -1,5 +1,4 @@
 'use client';
-
 import { useMemo } from 'react';
 import { TokenSource } from 'livekit-client';
 import { useSession } from '@livekit/components-react';
@@ -15,10 +14,28 @@ import { getSandboxTokenSource } from '@/lib/utils';
 
 const IN_DEVELOPMENT = process.env.NODE_ENV !== 'production';
 
+// Returns a stable identity for this browser, creating and saving one the
+// first time it's called. This lets the agent recognize the same caller
+// across separate calls (Day 4: memory).
+function getOrCreateParticipantIdentity(): string {
+  if (typeof window === 'undefined') {
+    // Server-side render pass has no localStorage; a real value is set on
+    // the client during the useMemo call below.
+    return 'server-placeholder';
+  }
+  const STORAGE_KEY = 'farm_field_participant_identity';
+  const existing = window.localStorage.getItem(STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+  const fresh = `voice_assistant_user_${Math.floor(Math.random() * 1_000_000)}`;
+  window.localStorage.setItem(STORAGE_KEY, fresh);
+  return fresh;
+}
+
 function AppSetup() {
   useDebugMode({ enabled: IN_DEVELOPMENT });
   useAgentErrors();
-
   return null;
 }
 
@@ -33,10 +50,12 @@ export function App({ appConfig }: AppProps) {
       : TokenSource.endpoint('/api/token');
   }, [appConfig]);
 
-  const session = useSession(
-    tokenSource,
-    appConfig.agentName ? { agentName: appConfig.agentName } : undefined
-  );
+  const participantIdentity = useMemo(() => getOrCreateParticipantIdentity(), []);
+
+  const session = useSession(tokenSource, {
+    ...(appConfig.agentName ? { agentName: appConfig.agentName } : {}),
+    participantIdentity,
+  });
 
   return (
     <AgentSessionProvider session={session}>
